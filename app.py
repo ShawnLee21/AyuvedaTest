@@ -1,20 +1,26 @@
 from flask import Flask, request, jsonify, render_template
 from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
+import os
 
-app = Flask(__name__)
+# Flask 配置
+app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Google Sheets 配置
-SERVICE_ACCOUNT_FILE = '/Users/jussie/Downloads/AyuvedaTest/ayuvedatest-9e2194434421.json'  # 替换为你的服务账号 JSON 文件路径
-SPREADSHEET_ID = '1sOit_I5vOfDXDdhG7p5cJAmYse_McUbHZOlGc_n5Sts'  # 替换为你的 Google Sheets ID
+SERVICE_ACCOUNT_FILE = os.path.join(os.getcwd(), 'ayuvedatest-9e2194434421.json')  # 修正文件路径为适配 Vercel
+SPREADSHEET_ID = '1sOit_I5vOfDXDdhG7p5cJAmYse_McUbHZOlGc_n5Sts'  # 替换为您的 Google Sheets ID
 RANGE_NAME = 'Sheet1!A1'  # 数据写入范围
 
 # 初始化 Google Sheets 客户端
-credentials = Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE,
-    scopes=["https://www.googleapis.com/auth/spreadsheets"]
-)
-sheet_service = build('sheets', 'v4', credentials=credentials)
+try:
+    credentials = Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE,
+        scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    )
+    sheet_service = build('sheets', 'v4', credentials=credentials)
+except Exception as e:
+    print("Google Sheets 初始化失败:", str(e))
+    sheet_service = None  # 确保即使出错程序仍能运行
 
 @app.route('/')
 def index():
@@ -27,6 +33,9 @@ def form():
 @app.route('/submit', methods=['POST'])
 def submit_data():
     try:
+        if not sheet_service:
+            raise Exception("Google Sheets 客户端未正确初始化！")
+
         # 接收 JSON 数据
         data = request.get_json()
         print("收到的数据:", data)
@@ -58,6 +67,9 @@ def submit_data():
 @app.route('/test_write')
 def test_write():
     try:
+        if not sheet_service:
+            raise Exception("Google Sheets 客户端未正确初始化！")
+
         # 测试写入 Google Sheets 的功能
         test_values = ['测试数据1', '测试数据2', '测试数据3']
         body = {'values': [test_values]}
@@ -72,6 +84,10 @@ def test_write():
     except Exception as e:
         print("测试写入失败:", str(e))
         return f"测试写入失败: {str(e)}"
+
+# Vercel 入口点
+def vercel_app(environ, start_response):
+    return app(environ, start_response)
 
 if __name__ == '__main__':
     app.run(debug=True)
