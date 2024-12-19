@@ -6,6 +6,10 @@ import os
 # Flask 配置
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
+#Vercel 配置
+from werkzeug.wsgi import DispatcherMiddleware
+app.wsgi_app = DispatcherMiddleware(app.wsgi_app)
+
 # Google Sheets 配置
 SERVICE_ACCOUNT_FILE = os.path.join(os.getcwd(), 'ayuvedatest-9e2194434421.json')  # 修正文件路径为适配 Vercel
 SPREADSHEET_ID = '1sOit_I5vOfDXDdhG7p5cJAmYse_McUbHZOlGc_n5Sts'  # 替换为您的 Google Sheets ID
@@ -88,6 +92,7 @@ def test_write():
 # Vercel 入口点
 def vercel_app(environ, start_response):
     return app(environ, start_response)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

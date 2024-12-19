@@ -35,12 +35,16 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // 提交表单并计算结果
-    form.addEventListener("submit", async function (e) {
+    form.addEventListener("submit", function (e) {
         e.preventDefault(); // 阻止默认表单提交
 
+        // 移除所有 required 属性以允许空白提交
+        const requiredFields = form.querySelectorAll("[required]");
+        requiredFields.forEach(field => field.removeAttribute("required"));
+
         // 收集表单数据
-        const formData = new FormData(form);
         const answers = {};
+        const formData = new FormData(form);
         formData.forEach((value, key) => {
             answers[key] = value;
         });
@@ -55,7 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // 计算比值
-        const total = doshaCounts.vata + doshaCounts.pitta + doshaCounts.kapha;
+        const total = doshaCounts.vata + doshaCounts.pitta + doshaCounts.kapha || 1;
         const ratios = {
             vata: ((doshaCounts.vata / total) * 100).toFixed(2) + "%",
             pitta: ((doshaCounts.pitta / total) * 100).toFixed(2) + "%",
@@ -75,32 +79,27 @@ document.addEventListener("DOMContentLoaded", function () {
             </div>
         `;
         resultContainer.style.display = "block"; // 显示结果容器
-        form.style.display = "none"; // 隐藏表单
 
-        // 添加重新测试功能
-        document.getElementById("restart-test").addEventListener("click", function () {
-            form.reset(); // 重置表单
-            resultContainer.style.display = "none"; // 隐藏结果容器
-            form.style.display = "block"; // 显示表单
-            showPage(0); // 返回第一页
-        });
-
-        // 提交数据到后端
-        try {
-            const response = await fetch("/submit", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(answers),
-            });
-
-            const result = await response.json();
-            if (result.status === "success") {
-                console.log("数据成功保存");
-            } else {
-                console.error("数据保存失败:", result.message);
+        // 动态将结果添加到表单
+        const appendHiddenField = (name, value) => {
+            let field = form.querySelector(`input[name="${name}"]`);
+            if (!field) {
+                field = document.createElement("input");
+                field.type = "hidden";
+                field.name = name;
+                form.appendChild(field);
             }
-        } catch (error) {
-            console.error("提交失败:", error);
-        }
+            field.value = value;
+        };
+
+        appendHiddenField("dosha_vata", doshaCounts.vata);
+        appendHiddenField("dosha_pitta", doshaCounts.pitta);
+        appendHiddenField("dosha_kapha", doshaCounts.kapha);
+        appendHiddenField("ratio_vata", ratios.vata);
+        appendHiddenField("ratio_pitta", ratios.pitta);
+        appendHiddenField("ratio_kapha", ratios.kapha);
+
+        // 使用标准表单提交
+        form.submit();
     });
 });
